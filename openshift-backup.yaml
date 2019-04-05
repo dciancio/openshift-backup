@@ -1,0 +1,157 @@
+---
+-
+  hosts: all
+  become_user: ec2-user
+  become: yes
+  run_once: true
+  vars:
+    timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time }}"
+    cluster_object_types:
+      - apiservices
+      - brokertemplateinstances
+      - certificatesigningrequests
+      - clusternetworks
+      - clusterresourcequotas
+      - clusterrolebindings
+      - clusterroles
+      - clusterservicebrokers
+      - clusterserviceclasses
+      - clusterserviceplans
+      - componentstatuses
+      - customresourcedefinitions
+      - groups
+      - hostsubnets
+      - identities
+      - images
+#      - imagesignatures
+      - mutatingwebhookconfigurations
+      - namespaces
+      - netnamespaces
+      - nodes
+      - oauthaccesstokens
+      - oauthauthorizetokens
+      - oauthclientauthorizations
+      - oauthclients
+      - persistentvolumes
+      - podsecuritypolicies
+#      - priorityclasses
+      - projectrequests
+      - projects
+#      - rangeallocations
+#      - resourceaccessreviews
+      - securitycontextconstraints
+#      - selfsubjectaccessreviews
+#      - selfsubjectrulesreviews
+      - storageclasses
+#      - subjectaccessreviews
+#      - tokenreviews
+#      - useridentitymappings
+      - users
+    project_object_types:
+#      - alertmanagers
+      - appliedclusterresourcequotas
+#      - bindings
+      - buildconfigs
+      - builds
+#      - bundlebindings
+#      - bundleinstances
+#      - bundles
+      - configmaps
+      - controllerrevisions
+      - cronjobs
+      - daemonsets
+      - deploymentconfigs
+      - deployments
+      - egressnetworkpolicies
+      - endpoints
+      - events
+      - horizontalpodautoscalers
+#      - imagestreamimages
+#      - imagestreamimports
+#      - imagestreammappings
+      - imagestreams
+      - imagestreamtags
+      - ingresses
+      - jobs
+      - limitranges
+#      - localresourceaccessreviews
+#      - localsubjectaccessreviews
+      - networkpolicies
+      - persistentvolumeclaims
+      - poddisruptionbudgets
+      - pods
+#      - podsecuritypolicyreviews
+#      - podsecuritypolicyselfsubjectreviews
+#      - podsecuritypolicysubjectreviews
+      - podtemplates
+#      - processedtemplates
+#      - prometheuses
+#      - prometheusrules
+      - replicasets
+      - replicationcontrollers
+      - resourcequotas
+      - rolebindingrestrictions
+      - rolebindings
+      - roles
+      - routes
+      - secrets
+#      - selfsubjectrulesreviews
+      - serviceaccounts
+      - servicebindings
+#      - servicebrokers
+#      - serviceclasses
+      - serviceinstances
+#      - servicemonitors
+#      - serviceplans
+      - services
+      - statefulsets
+#      - subjectrulesreviews
+      - templateinstances
+      - templates
+
+  tasks:
+    -
+      name: "Creating the cluster folder"
+      file:
+         path: "repository/{{ ansible_hostname }}/{{ timestamp }}/cluster"
+         state: directory
+      when: "'masters' in group_names"
+      tags: cluster, all
+    -
+      name: "Backing up cluster objects"
+      shell: oc get {{ item }} --export -o yaml > repository/{{ ansible_hostname }}/{{ timestamp }}/cluster/{{ item }}.yaml
+      ignore_errors: yes
+      with_items: "{{ cluster_object_types }}"
+      when: "'masters' in group_names"
+      tags: cluster, all
+    -
+      name: "Creating the projects folder"
+      file:
+         path: "repository/{{ ansible_hostname }}/{{ timestamp }}/projects"
+         state: directory
+      when: "'masters' in group_names"
+      tags: projects, all
+    -
+      name: "Getting project names"
+      shell: oc get projects | grep -v -i name | awk '{ print $1 }'
+      register: projects
+      when: "'masters' in group_names"
+      tags: projects, all
+    -
+      name: "Creating project folders"
+      file:
+         path: "repository/{{ ansible_hostname }}/{{ timestamp }}/projects/{{ item }}"
+         state: directory
+      with_items: "{{ projects.stdout_lines }}"
+      when: "'masters' in group_names"
+      tags: projects, all
+    -
+      name: "Backing up project objects"
+      shell: oc get {{ item[1] }} -n {{ item[0] }} --export -o yaml > repository/{{ ansible_hostname }}/{{ timestamp }}/projects/{{ item[0] }}/{{ item[1]}}.yaml
+      ignore_errors: yes
+      with_nested:
+         - "{{ projects.stdout_lines }}"
+         - "{{ project_object_types }}"
+      when: "'masters' in group_names"
+      tags: projects, all
+
