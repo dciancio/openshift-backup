@@ -116,27 +116,27 @@
          path: "repository/{{ ansible_hostname }}/{{ timestamp }}/cluster"
          state: directory
       when: "'masters' in group_names"
-      tags: cluster, all
+      tags: cluster
     -
       name: "Backing up cluster objects"
       shell: oc get {{ item }} --export -o yaml > repository/{{ ansible_hostname }}/{{ timestamp }}/cluster/{{ item }}.yaml
       ignore_errors: yes
       with_items: "{{ cluster_object_types }}"
       when: "'masters' in group_names"
-      tags: cluster, all
+      tags: cluster
     -
       name: "Creating the projects folder"
       file:
          path: "repository/{{ ansible_hostname }}/{{ timestamp }}/projects"
          state: directory
       when: "'masters' in group_names"
-      tags: projects, all
+      tags: projects
     -
       name: "Getting project names"
       shell: oc get projects | grep -v -i name | awk '{ print $1 }'
       register: projects
       when: "'masters' in group_names"
-      tags: projects, all
+      tags: projects
     -
       name: "Creating project folders"
       file:
@@ -144,7 +144,7 @@
          state: directory
       with_items: "{{ projects.stdout_lines }}"
       when: "'masters' in group_names"
-      tags: projects, all
+      tags: projects
     -
       name: "Backing up project objects"
       shell: oc get {{ item[1] }} -n {{ item[0] }} --export -o yaml > repository/{{ ansible_hostname }}/{{ timestamp }}/projects/{{ item[0] }}/{{ item[1]}}.yaml
@@ -153,5 +153,5 @@
          - "{{ projects.stdout_lines }}"
          - "{{ project_object_types }}"
       when: "'masters' in group_names"
-      tags: projects, all
+      tags: projects
 
